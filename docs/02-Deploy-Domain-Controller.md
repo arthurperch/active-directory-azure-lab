@@ -1,0 +1,143 @@
+# Active Directory Azure Lab – Deploy the Domain Controller
+
+Last Updated: January 6, 2026  
+Applies to: Azure Portal (2025 Q4 UI), Windows Server 2022 Datacenter, PowerShell 7.4
+
+---
+
+## Goal
+Provision a Windows Server 2022 VM, assign a static private IP, install Active Directory Domain Services (AD DS), and promote the server to a new forest (example domain: `mydomain.com`).
+
+---
+
+## Before You Begin
+- Complete [01-Azure-Setup](01-Azure-Setup.md).
+- Decide on a domain name that is not publicly routable (for example, `mydomain.com` or `corp.contoso.local`).
+- Gather local administrator credentials you will use when connecting via RDP.
+
+⚠️ **Important cost reminder**
+```
+Creating a VM starts billing immediately.
+Stop and deallocate the VM when you pause the lab.
+```
+
+---
+
+## Step 1 – Create the Virtual Machine
+1. In the resource group, select **Create** > **Virtual machine**.
+2. Basics tab:
+   - Subscription: same as earlier steps.
+   - Resource group: `rg-ad-lab`.
+   - Virtual machine name: `dc01`.
+   - Region: same as VNet.
+   - Availability options: `No infrastructure redundancy required` (lab scenario).
+   - Image: **Windows Server 2022 Datacenter: Azure Edition**.
+   - Size: `Standard_B2s` (2 vCPU, 4 GiB RAM) – suitable for labs.
+   - Administrator account: set a strong username/password (store securely).
+3. Disks tab: OS disk type can be **Standard SSD** to balance cost and performance.
+4. Networking tab:
+   - Virtual network: `vnet-ad-lab`.
+   - Subnet: `subnet-lab`.
+   - Public IP: create new (keep default SKU Basic for lab).
+   - NIC network security group: **None** (subnet-level NSG already protects traffic).
+   - Public inbound ports: `None` (we rely on NSG rule created earlier).
+5. Management tab: disable auto-shutdown only if you plan to manage your own schedule. Consider enabling it for extra cost protection.
+6. Review and create the VM.
+
+---
+
+## Step 2 – Assign a Static Private IP
+1. Once deployment finishes, open the VM and select **Networking** > **Network interface**.
+2. Under **IP configurations**, select `ipconfig1`.
+3. Change **Assignment** to `Static` and set **Private IP address** to `10.0.0.4`.
+4. Save the configuration.
+
+> Definition: **Static IP** – An IP that never changes. Domain controllers require static IPs so clients know where to find authentication and DNS services.
+
+---
+
+## Step 3 – Connect via RDP
+1. From the VM overview, click **Connect** > **RDP**.
+2. Download the RDP file and connect with the admin credentials you defined.
+3. Accept any certificate warnings; this is expected for self-signed certificates.
+
+If RDP fails, revisit the NSG inbound rule and ensure the VM status is `Running`.
+
+---
+
+## Step 4 – Rename the Computer (Optional but Recommended)
+1. In Windows Server, open **Server Manager** > **Local Server**.
+2. Click the computer name (default `WIN-XXXX`).
+3. Select **Change**, enter `DC01`, and confirm.
+4. Restart the VM when prompted.
+
+---
+
+## Step 5 – Install AD DS Role
+1. After restart, sign in again via RDP.
+2. Open **Server Manager** > **Manage** > **Add Roles and Features**.
+3. Choose **Role-based or feature-based installation**.
+4. Select the local server.
+5. Under **Server Roles**, check **Active Directory Domain Services**.
+6. Accept required features and proceed through the wizard.
+7. Select **Install** (no need to close the wizard; the installation continues in the background).
+
+> Definition: **Active Directory Domain Services (AD DS)** – Microsoft directory service storing user accounts, computers, and security information.
+
+---
+
+## Step 6 – Promote to Domain Controller
+1. When the role installation completes, click the yellow notification in Server Manager and select **Promote this server to a domain controller**.
+2. Choose **Add a new forest**.
+3. Enter your domain name (example: `mydomain.com`).
+4. Domain Controller Options:
+   - Forest functional level: `Windows Server 2022`.
+   - Domain functional level: `Windows Server 2022`.
+   - Keep DNS and Global Catalog selected.
+   - Set a Directory Services Restore Mode (DSRM) password and store it securely.
+5. DNS Options: you may ignore the static IP warning (already configured).
+6. Additional Options: NetBIOS name auto-populates (e.g., `MYDOMAIN`).
+7. Paths: leave defaults (database, log files, SYSVOL).
+8. Review options and select **Install**. The server restarts automatically.
+
+---
+
+## Step 7 – Verify Domain Controller Health
+After reboot, reconnect using the domain credentials `MYDOMAIN\\Administrator` (replace with your domain).
+
+Run the following checks in **Windows PowerShell** (run as Administrator):
+```powershell
+# Confirm domain services
+Get-ADDomain
+
+# Confirm DNS is running
+Get-Service DNS
+
+# Quick replication health (single DC should show success)
+dcdiag /test:services
+```
+
+Expected results:
+- `Get-ADDomain` returns your domain name and NetBIOS name.
+- `Get-Service DNS` shows `Running`.
+- `dcdiag` outputs `passed` results for all tests.
+
+---
+
+## Troubleshooting Tips
+| Issue | Symptoms | Fix |
+| --- | --- | --- |
+| Promotion fails at DNS configuration | Wizard reports DNS error | Ensure the NIC uses the server’s own IP for DNS (10.0.0.4). |
+| Cannot sign in with domain credentials | “User or password incorrect” | Use `MYDOMAIN\Administrator` format; confirm domain name spelled correctly. |
+| `dcdiag` errors about FRS | Warning about deprecated File Replication Service | Acceptable in lab; Windows Server 2022 uses DFS Replication, so warnings may be informational. |
+
+---
+
+## Cost Control Reminder
+- Deallocate `dc01` whenever you pause the lab: Azure Portal > Virtual Machines > `dc01` > **Stop** (deallocate).
+- Leaving the VM running 24/7 can add $15–$20 USD per week depending on your region.
+
+---
+
+## Next Steps
+Move to [03-Deploy-Client-VM](03-Deploy-Client-VM.md) to provision the Windows 10/11 workstation and join it to the domain.

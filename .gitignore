@@ -1,0 +1,17 @@
+# Ignore OS-specific files
+.DS_Store
+Thumbs.db
+
+# Ignore PowerShell artefacts
+*.ps1xml
+*.psc1
+*.pssc
+
+# Ignore logs and temporary files
+logs/
+*.log
+*.tmp
+~$*
+
+# Ignore VS Code settings (optional per contributor preference)
+.vscode/
