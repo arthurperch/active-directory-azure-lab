@@ -21,6 +21,7 @@ Platform baseline: Azure Portal (2025 Q4), Windows Server 2022 Datacenter, Windo
 | 07 | [Testing and Validation](docs/06-Testing-and-Validation.md) | Run the verification checklist and capture evidence. |
 | 08 | [Cleanup and Cost Management](docs/07-Cleanup-and-Cost-Management.md) | Stop, deallocate, or delete resources safely. |
 | Support | [Troubleshooting Guide](docs/Troubleshooting.md) | Resolve DNS, domain join, RDP, and script issues quickly. |
+| Assets | [Screenshot Workflow](docs/Screenshot-Workflow.md) | Capture, resize, and place screenshots so README visuals update instantly. |
 
 ---
 
@@ -84,6 +85,8 @@ Place high-quality screenshots in the following paths (PNG preferred for clarity
 | `images/steps/domain-controller-dashboard.png` | Server Manager or AD DS status on `dc01`. | 1600×900 PNG |
 | `images/steps/ad-users-and-computers.png` | User list showing bulk accounts in `_EMPLOYEES`. | 1600×900 PNG |
 | `images/steps/gpo-account-lockout.png` | Group Policy Management Console with the lockout policy. | 1600×900 PNG |
+
+Follow the step-by-step capture instructions in [docs/Screenshot-Workflow.md](docs/Screenshot-Workflow.md), then run `scripts/Validate-ImageAssets.ps1` to confirm nothing is missing before pushing.
 
 Replace the placeholders and keep file names identical so links remain valid. JPEG at 85% quality also works if PNG sizes are excessive.
 
