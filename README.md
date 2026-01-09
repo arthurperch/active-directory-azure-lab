@@ -1,8 +1,6 @@
 # Active Directory Azure Lab
+<img width="1918" height="988" alt="image" src="https://github.com/user-attachments/assets/1f6e3c6e-ba38-445e-841c-250bea91633a" />
 
-Build a polished, portfolio-ready Active Directory environment in Azure without guessing the order of steps.
-
-![Hero placeholder for the lab dashboard](images/hero/lab-hero.png)
 
 Last Updated: January 6, 2026  
 Platform baseline: Azure Portal (2025 Q4), Windows Server 2022 Datacenter, Windows 11 Enterprise, PowerShell 7.4
