@@ -65,7 +65,8 @@ Provisioned resources inside `Active_Dir_Lab`:
 ---
 
 ## PowerShell User Creation
-![PowerShell bulk user creation script running](screenshots/ScriptRunning.png)
+<img width="1824" height="1078" alt="image" src="https://github.com/user-attachments/assets/b66dc80d-e952-4250-8db9-3ed0242268a4" />
+
 
 - PowerShell script `scripts/Create-BulkUsers.ps1` provisions **10,000** unique lab identities.
 - Accounts reside in the `_EMPLOYEES` OU alongside `_ADMINS` and `_CLIENTS` containers.
