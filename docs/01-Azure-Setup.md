@@ -34,40 +34,42 @@ Applies to: Azure Portal (2025 Q4 UI)
 2. Select **Create**.
 3. Configure:
    - Subscription: your active subscription.
-   - Resource group name: `rg-ad-lab` (feel free to adjust naming, but stay consistent).
+   - Resource group name: `Active_Dir_Lab`.
    - Region: choose the Azure region closest to you to minimize latency.
 4. Click **Review + create**, then **Create**.
 
 > Why a resource group? It is the logical container for everything in the lab. When finished, deleting the group removes all contained resources in one step.
+
+![Azure resource group view](../screenshots/azure-portal-resource-group.png)
 
 ---
 
 ## Step 3 – Create the Virtual Network and Subnet
 1. Navigate to the new resource group and select **Create** > **Virtual network**.
 2. Enter:
-   - Name: `vnet-ad-lab`.
+   - Name: `Active_D_vnet`.
    - Region: same as the resource group.
 3. Under **IP Addresses**:
-   - IPv4 address space: `10.0.0.0/16` (plenty of room for future expansion).
-   - Subnet name: `subnet-lab`.
+   - IPv4 address space: `10.0.0.0/24` (keeps the lab simple and matches the deployed environment).
+   - Subnet name: `default`.
    - Subnet address range: `10.0.0.0/24`.
 4. Leave IPv6 disabled for simplicity.
 5. Review and create the VNet.
 
 ### Why These Ranges?
-`10.0.0.0/16` is a large address space with 65,536 IPs. Subdividing into `/24` subnets (256 IPs each) allows you to add more subnets later (for example, management or DMZ networks) without renumbering existing hosts.
+`10.0.0.0/24` aligns with the live lab. The address space supports up to 251 usable IP addresses, which is more than enough for `dc-1`, `client-1`, and any optional test hosts while maintaining tight control of DNS records.
 
 ---
 
 ## Step 4 – Create the Network Security Group (NSG)
 1. In the resource group, select **Create** > **Network security group**.
 2. Configure:
-   - Name: `nsg-ad-lab`.
+   - Name: `dc-1-nsg`.
    - Region: same region as the VNet.
 3. After creation, open the NSG and add inbound rules:
    - **Allow RDP**: Priority 100; Source `IP Addresses`; Source IP your public IP; Protocol `TCP`; Port `3389`; Action `Allow`.
    - **Allow Intra-VNet Traffic**: Priority 200; Source `VirtualNetwork`; Destination `VirtualNetwork`; Protocol `Any`; Action `Allow`.
-4. Associate the NSG with `subnet-lab` using the **Subnets** blade.
+4. Associate the NSG with the `default` subnet using the **Subnets** blade. When you deploy `client-1`, create a second NSG named `client-1-nsg` and reuse the same rule set to mirror the production environment captured in the screenshots.
 
 > Definition: **Network Security Group** – Azure's built-in firewall at the subnet or NIC level. It permits or denies traffic based on IP, port, and protocol. NSGs are stateful, so return traffic is automatically allowed.
 
@@ -106,7 +108,7 @@ Record the following in a secure note for later steps:
 ```
 Nothing in this document spins up virtual machines, so no compute costs yet.
 VMs will generate charges as soon as they run.
-Keep notes on what you create so you can delete it later.
+Keep notes on what you create so you can delete it later. The live lab reported $15.33 in spend after the full build, so staying disciplined with shutdowns makes a big difference.
 ```
 
 ---

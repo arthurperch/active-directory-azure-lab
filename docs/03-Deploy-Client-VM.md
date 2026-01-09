@@ -1,18 +1,18 @@
 # Active Directory Azure Lab – Deploy the Client VM
 
 Last Updated: January 6, 2026  
-Applies to: Azure Portal (2025 Q4 UI), Windows 11 Enterprise, Windows 10 Enterprise
+Applies to: Azure Portal (2025 Q4 UI), Windows 11 Enterprise
 
 ---
 
 ## Objective
-Create a Windows 10/11 virtual machine, configure DNS to point at the domain controller, join the machine to the Active Directory domain, and verify connectivity.
+Create a Windows 11 virtual machine, configure DNS to point at the domain controller, join the machine to the Active Directory domain, and verify connectivity.
 
 ---
 
 ## Prerequisites
 - [02-Deploy-Domain-Controller](02-Deploy-Domain-Controller.md) completed and the domain controller is running.
-- Domain controller private IP (`10.0.0.4` by default).
+- Domain controller private IP recorded in the previous step (for example, `10.0.0.4`).
 - Domain administrator credentials (for example, `MYDOMAIN\\Administrator`).
 
 ⚠️ **Important cost reminder**
@@ -26,34 +26,34 @@ Stop and deallocate both VMs when you are not actively testing.
 ## Step 1 – Create the Client VM
 1. In the resource group, select **Create** > **Virtual machine**.
 2. Basics tab:
-   - Name: `client01`.
+   - Name: `client-1`.
    - Image: **Windows 11 Enterprise, version 23H2** (or Windows 10 Enterprise if you prefer).
    - Size: `Standard_B2s` (2 vCPU, 4 GiB RAM).
    - Administrator username/password: choose strong credentials (different from domain admin to avoid confusion).
 3. Networking tab:
-   - Virtual network: `vnet-ad-lab`.
-   - Subnet: `subnet-lab`.
-   - Public IP: create new.
-   - NIC NSG: None (rely on subnet NSG).
+   - Virtual network: `Active_D_vnet`.
+   - Subnet: `default`.
+   - Public IP: create new (`client-1-ip`).
+   - NIC NSG: Attach `client-1-nsg` so the configuration matches `dc-1`.
 4. Review and create the VM.
 
 > Tip: Consider enabling auto-shutdown at a convenient time (for example, 22:00 local) to avoid accidental overnight charges.
 
 ---
 
-## Step 2 – Assign Static Private IP (Optional but Recommended)
+## Step 2 – Review the Private IP
 1. Open the VM’s **Networking** blade.
 2. Select the network interface and open **IP configurations**.
-3. Change `ipconfig1` assignment to `Static` and set the IP to `10.0.0.5`.
+3. Note the dynamically assigned IPv4 address (expect `10.0.0.5` in this lab). Leave the assignment set to **Dynamic** so the environment mirrors the reference screenshots.
 
-Static IPs are not mandatory for member servers, but they simplify documentation and troubleshooting during the lab.
+Azure keeps the IP reserved for the NIC while it exists. Document the value in your lab journal for future troubleshooting.
 
 ---
 
 ## Step 3 – Configure DNS to Use the Domain Controller
 1. Still on the NIC blade, select **DNS servers**.
 2. Set DNS to **Custom**.
-3. Enter `10.0.0.4` (the domain controller IP).
+3. Enter the `dc-1` private IP you recorded earlier (for example, `10.0.0.4`).
 4. Save changes. The VM may need a restart to pick up new settings.
 
 > Definition: **DNS** (Domain Name System) resolves human-readable names to IP addresses. Pointing the client at the domain controller ensures domain join and resource discovery work.
@@ -94,17 +94,17 @@ Run these commands in Windows PowerShell:
 Get-DnsClientServerAddress -InterfaceAlias "Ethernet"
 
 # Test DNS resolution of the DC
-Resolve-DnsName dc01.mydomain.com
+Resolve-DnsName dc-1.mydomain.com
 
 # Confirm LDAP connectivity
-Test-NetConnection -ComputerName dc01.mydomain.com -Port 389
+Test-NetConnection -ComputerName dc-1.mydomain.com -Port 389
 
 # Check domain membership
 (Get-ComputerInfo).CsDomain
 ```
 Expected output:
-- DNS server list contains `10.0.0.4`.
-- DNS resolution returns the DC IP.
+- DNS server list contains the `dc-1` IP you documented.
+- DNS resolution returns the `dc-1` IP.
 - `Test-NetConnection` shows `TcpTestSucceeded : True`.
 - `CsDomain` equals your domain name.
 
@@ -113,15 +113,15 @@ Expected output:
 ## Troubleshooting
 | Issue | Symptoms | Solution |
 | --- | --- | --- |
-| Cannot join domain | "The domain controller could not be contacted" | Ensure DNS is set to `10.0.0.4` and the NSG allows intra-VNet traffic. Ping `10.0.0.4` to confirm network reachability. |
-| Wrong domain credentials | "Access is denied" during join | Use `MYDOMAIN\Administrator` format and verify the password on `dc01`. |
-| Slow logons | Long pause at "Applying computer settings" | Confirm the client uses the private IP of the DC for DNS; remove any public DNS entries. |
+| Cannot join domain | "The domain controller could not be contacted" | Ensure DNS is set to the `dc-1` IP and the NSGs allow intra-VNet traffic. Use `Test-NetConnection` against port 389 to confirm reachability. |
+| Wrong domain credentials | "Access is denied" during join | Use `MYDOMAIN\Administrator` format and verify the password on `dc-1`. |
+| Slow logons | Long pause at "Applying computer settings" | Confirm the client uses the private IP of `dc-1` for DNS; remove any public DNS entries. |
 
 ---
 
 ## Cost Control Reminder
-- Stop both `dc01` and `client01` when not in use.
-- Monitor the **Estimated cost** tile in Cost Management to keep the monthly total near $10 USD.
+- Stop both `dc-1` and `client-1` when not in use.
+- Monitor the **Cost analysis** blade in Cost Management to ensure spending aligns with the $15.33 baseline captured in the reference deployment.
 
 ---
 

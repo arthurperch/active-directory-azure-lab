@@ -15,12 +15,12 @@ Applies to: Windows Server 2022, PowerShell 7.4, Active Directory Module for Win
 ## What You Will Do
 1. Create an `_EMPLOYEES` Organizational Unit to house lab accounts.
 2. Review the provided PowerShell script `Create-BulkUsers.ps1`.
-3. Customize settings such as number of accounts and default password.
+3. Confirm settings for password, OU path, and target count of 10,000 users.
 4. Run the script and verify results in ADUC and PowerShell.
 
 ⚠️ **Important cost reminder**
 ```
-All automation runs on dc01. Remember to stop and deallocate the VM after testing.
+All automation runs on dc-1. Remember to stop and deallocate the VM after testing.
 ```
 
 ---
@@ -29,7 +29,7 @@ All automation runs on dc01. Remember to stop and deallocate the VM after testin
 The script expects an `_EMPLOYEES` OU at the root of the domain. Create it manually or via PowerShell.
 
 **Using Active Directory Users and Computers**
-1. Open **Tools** > **Active Directory Users and Computers** on `dc01`.
+1. Open **Tools** > **Active Directory Users and Computers** on `dc-1`.
 2. Right-click the domain root (e.g., `mydomain.com`) > **New** > **Organizational Unit**.
 3. Name the OU `_EMPLOYEES` and leave **Protect container from accidental deletion** enabled.
 
@@ -67,11 +67,11 @@ Replace the distinguished name with your domain structure.
 Open the script and locate the configuration section near the top:
 ```powershell
 $PASSWORD_FOR_USERS = "P@ssw0rd123!"      # CHANGE THIS VALUE
-$NUMBER_OF_ACCOUNTS_TO_CREATE = 25         # Recommend 10-50 for labs
+$NUMBER_OF_ACCOUNTS_TO_CREATE = 10000      # Matches the reference lab deployment
 $TARGET_OU = "OU=_EMPLOYEES,DC=mydomain,DC=com"
 ```
 - `$PASSWORD_FOR_USERS`: Shared password for all generated accounts. Labs often reuse one value for convenience. Always change it before production use.
-- `$NUMBER_OF_ACCOUNTS_TO_CREATE`: Limits how many users the script creates. Start with 10 or 25 to keep AD manageable.
+- `$NUMBER_OF_ACCOUNTS_TO_CREATE`: Limits how many users the script creates. The reference lab uses 10,000 to simulate enterprise scale.
 - `$TARGET_OU`: Distinguished Name (DN) path where accounts are stored. Update `DC=` components to match your domain.
 
 ---
@@ -94,10 +94,10 @@ $TARGET_OU = "OU=_EMPLOYEES,DC=mydomain,DC=com"
 ---
 
 ## Step 5 – Run the Script
-1. On `dc01`, open **Windows PowerShell ISE** or **Windows Terminal** as Administrator.
+1. On `dc-1`, open **Windows PowerShell ISE** or **Windows Terminal** as Administrator.
 2. Change directory to the scripts folder:
    ```powershell
-   Set-Location "C:\Users\Administrator\Desktop\active-directory-azure-lab\scripts"
+    Set-Location "C:\active-directory-azure-lab\scripts"
    ```
    Adjust the path if you cloned the repository elsewhere.
 3. Unblock the script if downloaded from the internet:
@@ -109,16 +109,18 @@ $TARGET_OU = "OU=_EMPLOYEES,DC=mydomain,DC=com"
    ```powershell
    .\Create-BulkUsers.ps1
    ```
-6. Watch the console for confirmation messages such as `Created user: alex.morgan`.
+6. Watch the console for confirmation messages such as `Created user: bemumu.cu`. Expect the process to run for several minutes when creating 10,000 accounts.
 
 > Definition: **PowerShell** – Windows automation framework and scripting language. In this lab, PowerShell manages Active Directory operations through the `ActiveDirectory` module.
 
 ---
 
 ## Step 6 – Verify User Creation
-- **Active Directory Users and Computers**: Navigate to `_EMPLOYEES` and confirm new accounts appear.
-- **PowerShell**: Run `Get-ADUser -Filter * -SearchBase "OU=_EMPLOYEES,DC=mydomain,DC=com" | Select-Object Name, SamAccountName`.
-- **Logon test**: Use `client01` to sign in with one of the generated accounts. The default password is the value you set earlier.
+- **Active Directory Users and Computers**: Navigate to `_EMPLOYEES` and confirm all 10,000 accounts appear.
+- **PowerShell**: Run `Get-ADUser -Filter * -SearchBase "OU=_EMPLOYEES,DC=mydomain,DC=com" | Measure-Object` to confirm the total count.
+- **Logon test**: Use `client-1` to sign in with one of the generated accounts. The default password is the value you set earlier.
+
+![Bulk users created in Active Directory](../screenshots/ad-users-and-computers.png)
 
 ---
 
@@ -139,7 +141,7 @@ $TARGET_OU = "OU=_EMPLOYEES,DC=mydomain,DC=com"
 ## Troubleshooting
 | Issue | Cause | Fix |
 | --- | --- | --- |
-| `New-ADUser` access denied | Running script without Domain Admin rights | Sign in as the domain administrator on `dc01`. |
+| `New-ADUser` access denied | Running script without Domain Admin rights | Sign in as the domain administrator on `dc-1`. |
 | `ActiveDirectory` module not found | PowerShell session missing RSAT components | Open **Server Manager** > **Add Roles and Features** > enable **AD DS Tools**. |
 | Duplicate username errors | Random name generator produced same combination | Adjust script to skip duplicates or rerun after removing conflicting accounts. |
 

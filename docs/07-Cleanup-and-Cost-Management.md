@@ -27,8 +27,8 @@ Shutting down inside Windows is not enough.
 
 ## Step 1 – Stop and Deallocate Virtual Machines
 1. Go to **Virtual Machines** in the Azure Portal.
-2. Select `dc01` and click **Stop**. Confirm the status changes to `Stopped (deallocated)`.
-3. Repeat for `client01`.
+2. Select `dc-1` and click **Stop**. Confirm the status changes to `Stopped (deallocated)`.
+3. Repeat for `client-1`.
 4. Verify no VMs remain in the `Running` state.
 
 > Deallocated VMs release compute resources so you only pay for the storage backing the disks.
@@ -47,7 +47,7 @@ Deleting the public IP removes inbound RDP access. Only do this if you are comfo
 
 ## Step 3 – Export Configurations (Optional)
 Before full cleanup, export these items for documentation:
-- Screenshots stored in `images/` demonstrating key steps.
+- Screenshots stored in `screenshots/` demonstrating key steps.
 - List of users (`Get-ADUser` output saved to CSV).
 - Group Policy reports (`gpresult` HTML file).
 - Terraform or ARM template exports if you used Infrastructure as Code.
@@ -58,7 +58,7 @@ Store exports locally or in another repository for reference.
 
 ## Step 4 – Delete the Resource Group
 When you are ready to retire the lab:
-1. Navigate to the resource group (`rg-ad-lab`).
+1. Navigate to the resource group (`Active_Dir_Lab`).
 2. Select **Delete resource group**.
 3. Type the resource group name to confirm.
 4. Wait for deletion to complete (can take a few minutes).
@@ -72,27 +72,30 @@ Deleting the resource group removes all VMs, disks, network components, and publ
 - Filter by the last 7 days to confirm daily charges drop to zero after cleanup.
 - If charges persist, check for leftover resources (storage accounts, key vaults, etc.).
 
+![Azure cost analysis showing lab spending trend](../screenshots/cost-analysis-dashboard.png)
+
 ---
 
 ## Step 6 – Optional Automation
 For recurring labs, consider scripting cleanup:
+yourVmNames = @("dc01", "client01")
 ```powershell
 # Example PowerShell snippet to stop VMs
-yourVmNames = @("dc01", "client01")
+yourVmNames = @("dc-1", "client-1")
 foreach ($vm in yourVmNames) {
-    Stop-AzVM -Name $vm -ResourceGroupName "rg-ad-lab" -Force
+    Stop-AzVM -Name $vm -ResourceGroupName "Active_Dir_Lab" -Force
 }
 ```
 For full deletion:
 ```powershell
-Remove-AzResourceGroup -Name "rg-ad-lab" -Force
+Remove-AzResourceGroup -Name "Active_Dir_Lab" -Force
 ```
 Ensure you install the Az PowerShell module and authenticate with `Connect-AzAccount` before running these commands.
 
 ---
 
 ## Cost Monitoring Tips
-- Set up a budget in Azure Cost Management with alerts when spending exceeds $5 or $10.
+- Set up a budget in Azure Cost Management with alerts when spending exceeds $15, $30, and $60 (mirrors the real spending milestones).
 - Review the **Cost by resource** view to spot any orphaned disks or IP addresses.
 - Keep track of lab hours in your project log.
 

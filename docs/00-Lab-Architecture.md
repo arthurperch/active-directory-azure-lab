@@ -13,7 +13,7 @@ Understand how the lab components fit together before you provision any resource
 ## Visual Diagram Placeholder
 Insert your preferred diagram tool output here:
 
-![Lab Architecture Diagram](../images/architecture-diagram.png)
+![Lab Architecture Diagram](../screenshots/architecture-topology.png)
 
 > Tip: Draw a diagram even if you are the only viewer. Visualizing IP ranges, DNS flow, and trust boundaries makes troubleshooting easier later.
 
@@ -32,16 +32,16 @@ Insert your preferred diagram tool output here:
          [Resource Group]
                  |
         +----------------+
-        |    VNet 10.0.0.0/16
-        |    Subnet 10.0.0.0/24
+        |    VNet Active_D_vnet
+        |    Subnet default (10.0.0.0/24)
         +----------------+
            |            |
            |            |
    +---------------+  +---------------+
-   | DC01          |  | CLIENT01      |
-   | Win Server    |  | Windows 10/11 |
-   | 10.0.0.4      |  | 10.0.0.5      |
-   | DNS + AD DS   |  | Uses DC for   |
+   | dc-1          |  | client-1      |
+   | Win Server    |  | Windows 11    |
+   | DHCP address  |  | 10.0.0.5      |
+   | DNS + AD DS   |  | Uses dc-1 for |
    | NSG allows    |  | DNS + Domain  |
    | RDP           |  | Auth          |
    +---------------+  +---------------+
@@ -52,20 +52,20 @@ Insert your preferred diagram tool output here:
 ## Component Breakdown
 | Component | Purpose | Key Settings |
 | --- | --- | --- |
-| Resource Group | Container for all lab assets. Simplifies cleanup and cost tracking. | Name example: `rg-ad-lab` |
-| Virtual Network (VNet) | Software-defined network that isolates lab traffic inside Azure. | Address space: `10.0.0.0/16` |
-| Subnet | Smaller network segment that hosts the lab VMs. | Subnet range: `10.0.0.0/24` |
+| Resource Group | Container for all lab assets. Simplifies cleanup and cost tracking. | Name: `Active_Dir_Lab` |
+| Virtual Network (VNet) | Software-defined network that isolates lab traffic inside Azure. | Address space: `10.0.0.0/24` (`Active_D_vnet`) |
+| Subnet | Smaller network segment that hosts the lab VMs. | Subnet name: `default` |
 | Network Security Group (NSG) | Firewall rules controlling inbound/outbound traffic. | Allow TCP 3389 (RDP) from your public IP. Allow intra-subnet traffic. |
-| Domain Controller VM | Windows Server 2022 machine running Active Directory Domain Services (AD DS) and DNS. | Hostname `DC01`, private IP `10.0.0.4`, Standard_B2s size. |
-| Client VM | Windows 10/11 machine joined to the domain. | Hostname `CLIENT01`, private IP `10.0.0.5`, DNS server set to `10.0.0.4`. |
+| Domain Controller VM | Windows Server 2022 machine running Active Directory Domain Services (AD DS) and DNS. | Hostname `dc-1`, dynamic private IP, Standard_B2s size. |
+| Client VM | Windows 11 machine joined to the domain. | Hostname `client-1`, obtains dynamic IP (typically `10.0.0.5`), DNS server set to `dc-1`. |
 | Azure DNS / Public IP | Provides RDP access from your workstation to each VM. | Use Just-In-Time access or restrict inbound 3389 to your IP. |
 
 ---
 
 ## Key Concepts for Beginners
-- **Domain Controller**: The server that authenticates users, stores Active Directory data, and issues security tokens. In this lab, `DC01` holds the forest root domain (for example, `mydomain.com`).
+- **Domain Controller**: The server that authenticates users, stores Active Directory data, and issues security tokens. In this lab, `dc-1` holds the forest root domain (`mydomain.com`).
 - **DNS**: Domain Name System resolves hostnames to IP addresses. The domain controller doubles as the DNS server so domain-joined devices can locate services.
-- **Static IP**: A manually assigned IP address that does not change. Domain controllers need static IPs so clients can rely on consistent DNS responses.
+- **DHCP reservation**: Azure assigns addresses dynamically inside the subnet. Document the IP that `dc-1` receives so you can reference it in client DNS settings.
 - **Organizational Unit (OU)**: A container that helps administrators group users, computers, or other objects for easier management and Group Policy targeting.
 - **Group Policy Object (GPO)**: A collection of settings applied to users or computers. GPOs enforce security standards, scripts, and software deployments.
 
@@ -73,7 +73,7 @@ Insert your preferred diagram tool output here:
 
 ## How Traffic Flows
 1. **RDP from your workstation** reaches the Azure VM public IP. The NSG evaluates inbound rules and forwards allowed requests to the VM private IP.
-2. **Client authentication** occurs when the Windows 10/11 VM contacts the domain controller using Kerberos/LDAP over the virtual network. DNS records hosted on the domain controller make name resolution possible.
+2. **Client authentication** occurs when the Windows 11 VM (`client-1`) contacts the domain controller (`dc-1`) using Kerberos/LDAP over the virtual network. DNS records hosted on the domain controller make name resolution possible.
 3. **Group Policy replication** triggers when the client refreshes policies (`gpupdate` or every 90 minutes). The client pulls policy data and settings from the `SYSVOL` share on the domain controller.
 4. **PowerShell automation** runs locally on the domain controller. User objects are stored in the Active Directory database (`NTDS.dit`) and replicated within the forest if additional domain controllers exist.
 
@@ -82,11 +82,11 @@ Insert your preferred diagram tool output here:
 ## Interaction Summary
 | Source | Destination | Protocol | Purpose |
 | --- | --- | --- | --- |
-| Workstation | DC01 / CLIENT01 | RDP (TCP 3389) | Remote management |
-| CLIENT01 | DC01 | DNS (UDP/TCP 53) | Name resolution |
-| CLIENT01 | DC01 | Kerberos (TCP/UDP 88) | Authentication |
-| CLIENT01 | DC01 | LDAP (TCP/UDP 389) | Directory lookups |
-| CLIENT01 | DC01 | SMB (TCP 445) | Group Policy and logon scripts |
+| Workstation | dc-1 / client-1 | RDP (TCP 3389) | Remote management |
+| client-1 | dc-1 | DNS (UDP/TCP 53) | Name resolution |
+| client-1 | dc-1 | Kerberos (TCP/UDP 88) | Authentication |
+| client-1 | dc-1 | LDAP (TCP/UDP 389) | Directory lookups |
+| client-1 | dc-1 | SMB (TCP 445) | Group Policy and logon scripts |
 
 ---
 

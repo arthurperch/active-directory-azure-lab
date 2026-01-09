@@ -31,7 +31,7 @@ Deallocate them when you finish testing.
 ---
 
 ## Step 1 – Open Group Policy Management Console
-1. Sign in to `dc01` with domain admin credentials.
+1. Sign in to `dc-1` with domain admin credentials.
 2. Launch **Group Policy Management** from **Server Manager** > **Tools**.
 3. Expand `Forest: mydomain.com` > `Domains` > `mydomain.com`.
 
@@ -48,17 +48,19 @@ Deallocate them when you finish testing.
 Navigate to **Computer Configuration** > **Policies** > **Windows Settings** > **Security Settings** > **Account Policies** > **Account Lockout Policy**.
 
 Set the following values:
-- **Account lockout threshold**: `3` invalid logon attempts.
+- **Account lockout threshold**: `5` invalid logon attempts.
 - Confirm the prompts to set accompanying values.
-- **Account lockout duration**: `30` minutes.
-- **Reset account lockout counter after**: `30` minutes.
+- **Account lockout duration**: `10` minutes.
+- **Reset account lockout counter after**: `10` minutes.
 
-> Why 3 attempts? In production you might set higher thresholds, but a low number makes testing easy in the lab.
+> The reference lab uses 5 attempts to balance usability with security while keeping lockout windows short for testing.
+
+![Account lockout policy in Group Policy Management](../screenshots/gpo-account-lockout.png)
 
 ---
 
 ## Step 4 – Update Group Policy on Client
-1. On `client01`, sign in with a domain account that has local admin rights (e.g., `MYDOMAIN\Administrator`).
+1. On `client-1`, sign in with a domain account that has local admin rights (e.g., `MYDOMAIN\Administrator`).
 2. Open an elevated Command Prompt or PowerShell window.
 3. Run `gpupdate /force`.
 4. Wait for both Computer and User policy updates to complete.
@@ -77,10 +79,10 @@ If the GPO does not appear, restart the client or check replication (even though
 ---
 
 ## Step 6 – Test Account Lockout
-1. On `client01`, sign out or lock the workstation.
-2. Attempt to sign in with a test user (for example, `MYDOMAIN\alex.morgan`) using the wrong password three times.
-3. On the fourth attempt, Windows should report that the account is locked.
-4. On `dc01`, open **Active Directory Users and Computers** and locate the user.
+1. On `client-1`, sign out or lock the workstation.
+2. Attempt to sign in with a test user (for example, `MYDOMAIN\bemumu.cu`) using the wrong password five times.
+3. On the sixth attempt, Windows should report that the account is locked.
+4. On `dc-1`, open **Active Directory Users and Computers** and locate the user.
 5. Right-click the account > **Properties** > **Account** tab > check **Unlock account** to regain access manually.
 
 > Note: Lockout duration automatically expires after 30 minutes. Manual unlock is useful during testing.
@@ -120,7 +122,7 @@ Ensure you explain the purpose of each policy when documenting your lab.
 ## Cost Control Reminder
 When testing finishes:
 1. Sign out of both VMs.
-2. Azure Portal → Virtual Machines → select `dc01` and `client01` → **Stop** (deallocate).
+2. Azure Portal → Virtual Machines → select `dc-1` and `client-1` → **Stop** (deallocate).
 
 Stopping inside Windows does **not** release Azure compute charges.
 
