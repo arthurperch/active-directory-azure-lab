@@ -209,7 +209,7 @@ Unblock-File .\Create-BulkUsers.ps1
 ---
 
 ## Group Policy Configuration
-![GPO Account Lockout Policy](screenshots/gpo-account-lockout.png)
+![Group Policy and ADUC validation](screenshots/ad-users-and-computers.png)
 
 - Account lockout threshold: **5** invalid logon attempts
 - Account lockout duration: **10 minutes**
@@ -307,13 +307,9 @@ cd scripts
       <img src="screenshots/ScriptRunning.png" alt="PowerShell bulk user creation script output" width="360" />
       <p align="center">Bulk user automation running on dc-1</p>
     </td>
-    <td>
+    <td colspan="2">
       <img src="screenshots/ad-users-and-computers.png" alt="Active Directory Users and Computers console" width="360" />
       <p align="center">10,000 accounts inside _EMPLOYEES OU</p>
-    </td>
-    <td>
-      <img src="screenshots/gpo-account-lockout.png" alt="Group Policy Management console" width="360" />
-      <p align="center">Default Domain Policy enforcing lockout controls</p>
     </td>
   </tr>
   <tr>
