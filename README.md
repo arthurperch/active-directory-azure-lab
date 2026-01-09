@@ -1,5 +1,4 @@
 # Active Directory Azure Lab
-<img width="1918" height="988" alt="image" src="https://github.com/user-attachments/assets/1f6e3c6e-ba38-445e-841c-250bea91633a" />
 
 
 Last Updated: January 6, 2026  
