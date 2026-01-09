@@ -40,7 +40,9 @@ This lab demonstrates an enterprise-style Active Directory deployment inside Azu
 ---
 
 ## Lab Architecture
-![Azure VNet Topology](screenshots/architecture-topology.png)
+<p align="center">
+  <img src="screenshots/architecture-topology.png" alt="Azure VNet topology for Active_D_vnet" width="720" />
+</p>
 
 - `client-1` connects over RDP or VNC, receives a dynamic IP on `Active_D_vnet`, and forwards DNS queries to `dc-1`.
 - Azure NAT and routing enable `client-1` to reach `dc-1` over private addressing while exposing controlled public entry points.
@@ -63,11 +65,138 @@ Provisioned resources inside `Active_Dir_Lab`:
 ---
 
 ## PowerShell User Creation
-![Active Directory Users in _EMPLOYEES OU](screenshots/ad-users-and-computers.png)
+![PowerShell bulk user creation script running](screenshots/ScriptRunning.png)
 
 - PowerShell script `scripts/Create-BulkUsers.ps1` provisions **10,000** unique lab identities.
 - Accounts reside in the `_EMPLOYEES` OU alongside `_ADMINS` and `_CLIENTS` containers.
 - Sample names (`bemumu.cu`, `ben.fupi`, `bes.qlipo`) confirm randomized generation.
+
+The complete script is included below so you can review the safeguards (module validation, OU existence checks, duplicate handling) before running it in your own environment.
+
+```powershell
+<#
+.SYNOPSIS
+  Bulk Active Directory User Creation Script
+.DESCRIPTION
+  Creates multiple test user accounts in Active Directory with random names.
+  Useful for lab environments and testing Group Policy, permissions, or logon behavior.
+.NOTES
+  Author: Oleg Perchatkin
+  Version: 1.0
+  Requires: Active Directory PowerShell Module
+.EXAMPLE
+  .\Create-BulkUsers.ps1
+#>
+
+[CmdletBinding()]
+param (
+  [Parameter(Mandatory = $false)]
+  [ValidateRange(1,1000)]
+  [int]$NumberOfAccountsToCreate = 25,
+
+  [Parameter(Mandatory = $false)]
+  [string]$PasswordForUsers = "P@ssw0rd123!",
+
+  [Parameter(Mandatory = $false)]
+  [string]$TargetOu = "OU=_EMPLOYEES,DC=mydomain,DC=com"
+)
+
+# region Validate environment
+try {
+  Import-Module ActiveDirectory -ErrorAction Stop
+}
+catch {
+  Write-Error "Active Directory module not available. Install RSAT: Active Directory Domain Services Tools before running this script.";
+  return
+}
+
+if (-not (Get-ADOrganizationalUnit -Filter "DistinguishedName -eq '$TargetOu'" -ErrorAction SilentlyContinue)) {
+  Write-Error "Target OU '$TargetOu' not found. Create it before running the script.";
+  return
+}
+# endregion
+
+# Convert the plain text password to a secure string for New-ADUser.
+$securePassword = ConvertTo-SecureString -String $PasswordForUsers -AsPlainText -Force
+
+# Helper function creates names that look realistic enough for lab demos.
+function New-RandomName {
+  [OutputType([pscustomobject])]
+  param ()
+
+  $consonants = "bcdfghjklmnpqrstvwxyz".ToCharArray()
+  $vowels = "aeiou".ToCharArray()
+
+  function Get-Syllable([int]$length) {
+    $name = ""
+    for ($i = 0; $i -lt $length; $i++) {
+      $name += $consonants[(Get-Random -Minimum 0 -Maximum $consonants.Length)]
+      $name += $vowels[(Get-Random -Minimum 0 -Maximum $vowels.Length)]
+    }
+    return ($name.Substring(0,1).ToUpper() + $name.Substring(1))
+  }
+
+  $first = Get-Syllable -length (Get-Random -Minimum 2 -Maximum 3)
+  $last = Get-Syllable -length (Get-Random -Minimum 2 -Maximum 3)
+
+  return [pscustomobject]@{
+    GivenName = $first
+    Surname   = $last
+  }
+}
+
+# Track successes for a concise summary.
+$createdUsers = @()
+
+for ($i = 1; $i -le $NumberOfAccountsToCreate; $i++) {
+  $name = New-RandomName
+  $givenName = $name.GivenName
+  $surname = $name.Surname
+
+  $samAccountName = ("{0}.{1}" -f $givenName, $surname).ToLower()
+  $userPrincipalName = "{0}@{1}" -f $samAccountName, ((Get-ADDomain).DNSRoot)
+
+  # Ensure username uniqueness by appending a counter if necessary.
+  $samCandidate = $samAccountName
+  $counter = 1
+  while (Get-ADUser -Filter "SamAccountName -eq '$samCandidate'" -ErrorAction SilentlyContinue) {
+    $samCandidate = "{0}{1}" -f $samAccountName, $counter
+    $userPrincipalName = "{0}@{1}" -f $samCandidate, ((Get-ADDomain).DNSRoot)
+    $counter++
+  }
+
+  $parameters = @{
+    Name                  = ("{0} {1}" -f $givenName, $surname)
+    GivenName             = $givenName
+    Surname               = $surname
+    SamAccountName        = $samCandidate
+    UserPrincipalName     = $userPrincipalName
+    DisplayName           = ("{0} {1}" -f $givenName, $surname)
+    EmployeeID            = (Get-Random -Minimum 100000 -Maximum 999999).ToString()
+    AccountPassword       = $securePassword
+    Enabled               = $true
+    PasswordNeverExpires  = $true
+    Path                  = $TargetOu
+    ChangePasswordAtLogon = $false
+  }
+
+  try {
+    New-ADUser @parameters
+    Write-Host "Created user: $($parameters.SamAccountName)" -ForegroundColor Green
+    $createdUsers += $parameters.SamAccountName
+  }
+  catch {
+    Write-Warning "Failed to create user '$($parameters.SamAccountName)': $_"
+  }
+}
+
+Write-Host "Completed. Created $($createdUsers.Count) of $NumberOfAccountsToCreate requested accounts." -ForegroundColor Cyan
+
+# Optional: list the first few accounts created for quick review.
+$createdUsers | Select-Object -First 5 | ForEach-Object { Write-Host "Sample account: $_" -ForegroundColor Yellow }
+```
+
+> Tip: Supply `-NumberOfAccountsToCreate 10000` when you run the script to mirror the reference lab scale; the default of 25 keeps quick smoke tests fast.
 
 Example execution on `dc-1` after cloning the repository:
 ```powershell
@@ -75,7 +204,7 @@ cd C:\active-directory-azure-lab\scripts
 Unblock-File .\Create-BulkUsers.ps1
 ./Create-BulkUsers.ps1 -UserCount 10000 -TargetOU "OU=_EMPLOYEES,DC=mydomain,DC=com"
 ```
-(Parameters are optional; the script defaults to 10,000 users and the `_EMPLOYEES` OU.)
+(Parameters shown align the run with the 10,000-user reference; adjust values as needed for your own lab.)
 
 ---
 
@@ -175,6 +304,10 @@ cd scripts
   </tr>
   <tr>
     <td>
+      <img src="screenshots/ScriptRunning.png" alt="PowerShell bulk user creation script output" width="360" />
+      <p align="center">Bulk user automation running on dc-1</p>
+    </td>
+    <td>
       <img src="screenshots/ad-users-and-computers.png" alt="Active Directory Users and Computers console" width="360" />
       <p align="center">10,000 accounts inside _EMPLOYEES OU</p>
     </td>
@@ -182,8 +315,10 @@ cd scripts
       <img src="screenshots/gpo-account-lockout.png" alt="Group Policy Management console" width="360" />
       <p align="center">Default Domain Policy enforcing lockout controls</p>
     </td>
-    <td>
-      <img src="screenshots/cost-analysis-dashboard.png" alt="Azure cost analysis dashboard" width="360" />
+  </tr>
+  <tr>
+    <td colspan="3">
+      <img src="screenshots/cost-analysis-dashboard.png" alt="Azure cost analysis dashboard" width="720" />
       <p align="center">January 2026 spend vs forecast</p>
     </td>
   </tr>
